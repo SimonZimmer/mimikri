@@ -1,0 +1,4 @@
+ddsp
+matplotlib
+numpy
+

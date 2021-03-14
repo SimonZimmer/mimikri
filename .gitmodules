@@ -1,0 +1,3 @@
+[submodule "ThirdParty/ddsp"]
+	path = ThirdParty/ddsp
+	url = https://github.com/magenta/ddsp.git
