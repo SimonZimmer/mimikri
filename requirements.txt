@@ -1,4 +1,7 @@
 ddsp
 matplotlib
 numpy
+soundfile
+apache_beam
+gin
 

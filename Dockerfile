@@ -31,6 +31,10 @@ RUN $PIP_INSTALL \
   setuptools \
   -r requirements.txt
 
+# Project dependencies
+RUN $APT_INSTALL libsndfile1 -y \
+  ffmpeg
+
 # Config & cleanup
 RUN ldconfig \
   && apt-get clean \
