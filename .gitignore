@@ -136,3 +136,6 @@ dataset/*
 
 # JetBrains
 .idea
+
+# outputs
+*.wav

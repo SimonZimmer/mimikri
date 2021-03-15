@@ -1,7 +1,11 @@
+audio_dir = '../dataset/audio'
+audio_filepattern = audio_dir + '/*'
+train_tfrecord = '../dataset/tfrecords/train.tfrecord'
+train_tfrecord_filepattern = train_tfrecord + '*'
 
-AUDIO_DIR = '../dataset/audio'
-AUDIO_FILEPATTERN = AUDIO_DIR + '/*'
-TRAIN_TFRECORD = '../dataset/tfrecords/train.tfrecord'
-TRAIN_TFRECORD_FILEPATTERN = TRAIN_TFRECORD + '*'
+audio_out_dir = '../audio_out'
+num_epochs = 300
+batch_size = 128
 
-TIME_STEPS = 1000
+sample_rate = 16000
+time_steps = 1000

@@ -11,8 +11,8 @@ def convert_to_tfrecord():
         return
 
     os.system(f"python ThirdParty/ddsp/ddsp/training/data_preparation/ddsp_prepare_tfrecord.py \
-    --input_audio_filepatterns={config.AUDIO_FILEPATTERN} \
-    --output_tfrecord_path={config.TRAIN_TFRECORD} \
+    --input_audio_filepatterns={config.audio_filepattern} \
+    --output_tfrecord_path={config.train_tfrecord} \
     --num_shards=10 \
     --alsologtostderr")
 
