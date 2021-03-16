@@ -8,16 +8,10 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import time
 import config
+import dataset_preparation
 import ddsp
 from ddsp.training import (data, decoders, models, preprocessing,
                            train_util, trainers)
-
-
-data_provider = ddsp.training.data.TFRecordProvider(config.train_tfrecord_filepattern)
-dataset = data_provider.get_batch(batch_size=config.batch_size, shuffle=True).take(1).repeat()
-batch = next(iter(dataset))
-audio = batch['audio']
-n_samples = audio.shape[1]
 
 
 def write_audio_file(filepath, audio):
@@ -49,7 +43,7 @@ def create_model(processor_group, spectral_loss):
 
 
 def create_processor_group():
-    harmonic = ddsp.synths.Harmonic(n_samples=n_samples,
+    harmonic = ddsp.synths.Harmonic(n_samples=config.n_samples,
                                     sample_rate=config.sample_rate,
                                     name='harmonic')
 
@@ -80,9 +74,15 @@ def train(trainer, dataset):
     audio_noise = controls['noise']['signal']
     print('Prediction took %.1f seconds' % (time.time() - start_time))
 
-    write_audio_file(os.path.join('../audio_out', 'audio_resynthesized.wav'), audio_gen)
-    write_audio_file(os.path.join('../audio_out', 'audio_noise_modelled.wav'), audio_noise)
+    write_audio_file(os.path.join(config.audio_out_dir, 'audio_resynthesized.wav'), audio_gen)
+    write_audio_file(os.path.join(config.audio_out_dir, 'audio_noise_modelled.wav'), audio_noise)
 
+
+
+dataset_preparation.convert_to_tfrecord()
+
+data_provider = ddsp.training.data.TFRecordProvider(config.train_tfrecord_filepattern)
+dataset = data_provider.get_batch(batch_size=config.batch_size, shuffle=True)
 
 processor_group = ddsp.processors.ProcessorGroup(dag=create_processor_group(),
                                                  name='processor_group')
