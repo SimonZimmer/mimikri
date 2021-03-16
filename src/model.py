@@ -11,7 +11,7 @@ import config
 import dataset_preparation
 import ddsp
 from ddsp.training import (data, decoders, models, preprocessing,
-                           train_util, trainers)
+                           train_util, eval_util, trainers)
 
 
 def write_audio_file(filepath, audio):
@@ -59,14 +59,20 @@ def create_processor_group():
     return dag
 
 
-def train(trainer, dataset):
+def train(data_provider, trainer):
+    train_util.train(data_provider, trainer,
+                     config.batch_size, config.num_epochs,
+                     config.steps_per_summary,
+                     config.steps_per_save,
+                     config.save_dir,
+                     config.restore_dir,
+                     config.early_stop_loss_value)
+
+
+def sample(data_provider, model):
+    dataset = data_provider.get_batch(config.batch_size, shuffle=True, repeats=-1)
+    dataset = trainer.distribute_dataset(dataset)
     dataset_iter = iter(dataset)
-    for i in range(config.num_epochs):
-        losses = trainer.train_step(dataset_iter)
-        res_str = 'step: {}\t'.format(i)
-        for k, v in losses.items():
-            res_str += '{}: {:.2f}\t'.format(k, v)
-        print(res_str)
 
     start_time = time.time()
     controls = model(next(dataset_iter))
@@ -78,11 +84,7 @@ def train(trainer, dataset):
     write_audio_file(os.path.join(config.audio_out_dir, 'audio_noise_modelled.wav'), audio_noise)
 
 
-
 dataset_preparation.convert_to_tfrecord()
-
-data_provider = ddsp.training.data.TFRecordProvider(config.train_tfrecord_filepattern)
-dataset = data_provider.get_batch(batch_size=config.batch_size, shuffle=True)
 
 processor_group = ddsp.processors.ProcessorGroup(dag=create_processor_group(),
                                                  name='processor_group')
@@ -92,6 +94,6 @@ spectral_loss = ddsp.losses.SpectralLoss(loss_type='L1',
 
 model, strategy = create_model(processor_group, spectral_loss)
 trainer = trainers.Trainer(model, strategy, learning_rate=1e-3)
-dataset = trainer.distribute_dataset(dataset)
-trainer.build(next(iter(dataset)))
-train(trainer, dataset)
+data_provider = ddsp.training.data.TFRecordProvider(config.train_tfrecord_filepattern)
+train(data_provider, trainer)
+sample(data_provider, model)
