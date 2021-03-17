@@ -4,3 +4,5 @@ numpy
 soundfile
 apache_beam
 gin
+google-colab
+

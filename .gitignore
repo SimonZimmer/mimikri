@@ -139,3 +139,7 @@ dataset/*
 
 # outputs
 *.wav
+*.pkl
+*.data*
+*.gin
+*.index
