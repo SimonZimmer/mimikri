@@ -1,6 +1,7 @@
-import os
 import config
+import ddsp.training
 from ddsp.colab import colab_utils
+import os
 import ddsp.training
 
 
@@ -29,10 +30,6 @@ def convert_to_tfrecord():
 
 def extract_statistics():
     data_provider = ddsp.training.data.TFRecordProvider(config.train_tfrecord_filepattern)
-    pickle_file_path = os.path.join(config.save_dir, 'dataset_statistics.pkl')
+    pickle_file_path = os.path.join(config.train_statistics_dir, 'dataset_statistics.pkl')
 
     colab_utils.save_dataset_statistics(data_provider, pickle_file_path, batch_size=1)
-
-
-convert_to_tfrecord()
-extract_statistics()

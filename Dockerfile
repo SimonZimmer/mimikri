@@ -42,4 +42,3 @@ RUN ldconfig \
   && rm -rf /var/lib/apt/lists/* /tmp/* ~/*
 
 EXPOSE 6006
-

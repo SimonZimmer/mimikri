@@ -143,3 +143,5 @@ dataset/*
 *.data*
 *.gin
 *.index
+*.h5
+training_artefacts/*

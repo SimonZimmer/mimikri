@@ -4,5 +4,6 @@ numpy
 soundfile
 apache_beam
 gin
+gin-config
 google-colab
-
+absl-py==0.10
