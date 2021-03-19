@@ -16,6 +16,23 @@ def write_audio_file(filepath, audio):
     soundfile.write(filepath, encoded_audio, config.sample_rate)
 
 
+def create_processor_group():
+    harmonic = ddsp.synths.Harmonic(n_samples=config.n_samples,
+                                    sample_rate=config.sample_rate,
+                                    name='harmonic')
+
+    noise = ddsp.synths.FilteredNoise(window_size=0,
+                                      initial_bias=-10.0,
+                                      name='noise')
+    add = ddsp.processors.Add(name='add')
+
+    dag = [(harmonic, ['amps', 'harmonic_distribution', 'f0_hz']),
+           (noise, ['noise_magnitudes']),
+           (add, ['noise/signal', 'harmonic/signal'])]
+
+    return dag
+
+
 def build():
     processor_group = ddsp.processors.ProcessorGroup(dag=create_processor_group(),
                                                      name='processor_group')
@@ -44,27 +61,8 @@ def build():
     return model, strategy
 
 
-def create_processor_group():
-    harmonic = ddsp.synths.Harmonic(n_samples=config.n_samples,
-                                    sample_rate=config.sample_rate,
-                                    name='harmonic')
-
-    noise = ddsp.synths.FilteredNoise(window_size=0,
-                                      initial_bias=-10.0,
-                                      name='noise')
-    add = ddsp.processors.Add(name='add')
-
-    dag = [(harmonic, ['amps', 'harmonic_distribution', 'f0_hz']),
-           (noise, ['noise_magnitudes']),
-           (add, ['noise/signal', 'harmonic/signal'])]
-
-    return dag
-
-
 def parse_gin():
-    # Parse gin configs, later calls override earlier ones.
     with gin.unlock_config():
-        # Optimization defaults.
         opt_default = 'base.gin'
         gin.parse_config_file(os.path.join('../ThirdParty', 'ddsp', 'ddsp', 'training',
                                            'gin', 'optimization', opt_default))
@@ -72,7 +70,6 @@ def parse_gin():
         gin.parse_config_file(os.path.join('../ThirdParty', 'ddsp', 'ddsp', 'training',
                                            'gin', 'eval', eval_default))
 
-        # Load operative_config if it exists (model has already trained).
         operative_config = train_util.get_latest_operative_config(config.save_dir)
         if tf.io.gfile.exists(operative_config):
             logging.info('Using operative config: %s', operative_config)
@@ -93,36 +90,33 @@ def train(data_provider, trainer):
                      config.batch_size, config.num_steps,
                      config.steps_per_summary,
                      config.steps_per_save,
-                     config.save_dir,
+                     config.saved_models_dir,
                      config.restore_dir,
                      config.early_stop_loss_value)
-    trainer.model.save_weights(os.path.join(config.save_dir, 'my_model_weights.h5'))
+    trainer.model.save_weights(os.path.join(config.save_dir, 'weights.h5'))
 
 
-def load(audio):
-    gin_file = os.path.join(config.save_dir, 'operative_config-0.gin')
-
-    # Load the dataset statistics.
-    datasets_stats = None
-    dataset_stats_file = os.path.join(config.train_statistics_dir, 'dataset_statistics.pkl')
-    print(f'Loading dataset statistics from {dataset_stats_file}')
+def load_dataset_statistics():
+    dataset_stats = None
+    dataset_stats_file = os.path.join(config.dataset_statistics_dir, 'dataset_statistics.pkl')
+    logging.info(f'Loading dataset statistics from {dataset_stats_file}')
     try:
         if tf.io.gfile.exists(dataset_stats_file):
             with tf.io.gfile.GFile(dataset_stats_file, 'rb') as f:
                 dataset_stats = pickle.load(f)
     except Exception as err:
-        print('Loading dataset statistics from pickle failed: {}.'.format(err))
+        logging.info('Loading dataset statistics from pickle failed: {}.'.format(err))
 
-    # Parse gin config
+    return dataset_stats
+
+
+def load(audio):
+    gin_file = os.path.join(config.save_dir, 'operative_config-0.gin')
+    dataset_statistics = load_dataset_statistics()
+
     with gin.unlock_config():
         gin.parse_config_file(gin_file, skip_unknown=True)
 
-    # Assumes only one checkpoint in the folder, 'ckpt-[iter]`
-    ckpt_files = [f for f in tf.io.gfile.listdir(config.save_dir) if 'ckpt' in f]
-    ckpt_name = ckpt_files[0].split('.')[0]
-    ckpt = os.path.join(config.save_dir, ckpt_name)
-
-    # Ensure dimensions and sampling rates are equal
     time_steps_train = config.time_steps
     n_samples_train = config.n_samples
     hop_size = int(n_samples_train / time_steps_train)
@@ -134,34 +128,29 @@ def load(audio):
         'Harmonic.n_samples = {}'.format(n_samples),
         'FilteredNoise.n_samples = {}'.format(n_samples),
         'F0LoudnessPreprocessor.time_steps = {}'.format(time_steps),
-        'oscillator_bank.use_angular_cumsum = True',  # Avoids cumsum accumulation errors
+        'oscillator_bank.use_angular_cumsum = True',
     ]
 
     with gin.unlock_config():
         gin.parse_config(gin_params)
 
-    # Compute features
     start_time = time.time()
     audio_features = ddsp.training.metrics.compute_audio_features(audio)
     audio_features['loudness_db'] = audio_features['loudness_db'].astype(np.float32)
-    print('Audio features took %.1f seconds' % (time.time() - start_time))
+    logging.info('Audio features took %.1f seconds' % (time.time() - start_time))
 
-    # Trim all input vectors to correct lengths
     for key in ['f0_hz', 'f0_confidence', 'loudness_db']:
         audio_features[key] = audio_features[key][:time_steps]
     audio_features['audio'] = audio_features['audio'][:n_samples]
 
-    # Set up the model just to predict audio given new conditioning
     model = build()[0]
-
-    # Build model by running a batch through it.
     start_time = time.time()
     _ = model(audio_features, training=False)
 
-    model.load_weights(os.path.join(config.save_dir, 'my_model_weights.h5'))
-    print('Restoring model took %.1f seconds' % (time.time() - start_time))
+    model.load_weights(os.path.join(config.save_dir, 'weights.h5'))
+    logging.info('Restoring model took %.1f seconds' % (time.time() - start_time))
 
-    return model, dataset_stats
+    return model, dataset_statistics
 
 
 def sample(data_provider, model, trainer):
@@ -173,7 +162,7 @@ def sample(data_provider, model, trainer):
     controls = model(next(dataset_iter))
     audio_gen = model.get_audio_from_outputs(controls)
     audio_noise = controls['noise']['signal']
-    print('Prediction took %.1f seconds' % (time.time() - start_time))
+    logging.info('Prediction took %.1f seconds' % (time.time() - start_time))
 
     write_audio_file(os.path.join(config.audio_out_dir, 'audio_resynthesized.wav'), audio_gen)
     write_audio_file(os.path.join(config.audio_out_dir, 'audio_noise_modelled.wav'), audio_noise)
