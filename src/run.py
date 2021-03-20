@@ -15,16 +15,20 @@ if 'absl.logging' in sys.modules:
     absl.logging.set_stderrthreshold('info')
 
 
-dataset_preparation.clean_dataset()
-dataset_preparation.convert_to_tfrecord()
-dataset_preparation.extract_statistics()
+def train_new_model():
+    dataset_preparation.clean_dataset()
+    dataset_preparation.convert_to_tfrecord()
+    dataset_preparation.extract_statistics()
+    model, strategy = autoencoder.build()
+    trainer = trainers.Trainer(model, strategy, learning_rate=1e-3)
+    data_provider = ddsp.training.data.TFRecordProvider(config.dataset_tfrecord_filepattern)
+    autoencoder.train(data_provider, trainer)
 
-model, strategy = autoencoder.build()
-trainer = trainers.Trainer(model, strategy, learning_rate=1e-3)
-data_provider = ddsp.training.data.TFRecordProvider(config.dataset_tfrecord_filepattern)
-autoencoder.train(data_provider, trainer)
-autoencoder.sample(data_provider, model, trainer)
 
-audio, sr = librosa.load('../input_audio/taiko.wav', sr=config.sample_rate)
-encoder, dataset_stats = autoencoder.load(audio)
-autoencoder.sample(data_provider, encoder, trainer)
+def timbre_transfer(audio_in_path):
+    audio, sr = librosa.load(audio_in_path, sr=config.sample_rate)
+    trained_model, audio_features = autoencoder.load(audio)
+    autoencoder.sample(trained_model, audio_features)
+
+
+train_new_model()

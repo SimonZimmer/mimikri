@@ -3,6 +3,7 @@ import ddsp.training
 from ddsp.colab import colab_utils
 import os
 import ddsp.training
+import subprocess
 
 
 def clean_dataset():
@@ -20,12 +21,13 @@ def clean_dataset():
 
 
 def convert_to_tfrecord():
-    clean_dataset()
-    os.system(f"python ../ThirdParty/ddsp/ddsp/training/data_preparation/ddsp_prepare_tfrecord.py \
-    --input_audio_filepatterns={config.dataset_audio_filepattern} \
-    --output_tfrecord_path={config.dataset_tfrecord} \
-    --num_shards=10 \
-    --alsologtostderr")
+    command = [
+        "../ThirdParty/ddsp/ddsp/training/data_preparation/ddsp_prepare_tfrecord.py",
+        f"--input_audio_filepatterns={config.dataset_audio_filepattern}",
+        f"--output_tfrecord_path={config.dataset_tfrecord}",
+        "--alsologtostderr"
+    ]
+    subprocess.run(command)
 
 
 def extract_statistics():

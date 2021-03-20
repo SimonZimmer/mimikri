@@ -112,7 +112,6 @@ def load_dataset_statistics():
 
 def load(audio):
     gin_file = os.path.join(config.save_dir, 'operative_config-0.gin')
-    dataset_statistics = load_dataset_statistics()
 
     with gin.unlock_config():
         gin.parse_config_file(gin_file, skip_unknown=True)
@@ -150,16 +149,12 @@ def load(audio):
     model.load_weights(os.path.join(config.save_dir, 'weights.h5'))
     logging.info('Restoring model took %.1f seconds' % (time.time() - start_time))
 
-    return model, dataset_statistics
+    return model, audio_features
 
 
-def sample(data_provider, model, trainer):
-    dataset = data_provider.get_batch(config.batch_size, shuffle=True, repeats=-1)
-    dataset = trainer.distribute_dataset(dataset)
-    dataset_iter = iter(dataset)
-
+def sample(model, audio_features):
     start_time = time.time()
-    controls = model(next(dataset_iter))
+    controls = model(audio_features, training=False)
     audio_gen = model.get_audio_from_outputs(controls)
     audio_noise = controls['noise']['signal']
     logging.info('Prediction took %.1f seconds' % (time.time() - start_time))
