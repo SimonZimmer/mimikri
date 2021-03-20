@@ -1,9 +1,10 @@
-import config
+import os
+import subprocess
+
 import ddsp.training
 from ddsp.colab import colab_utils
-import os
-import ddsp.training
-import subprocess
+
+import config
 
 
 def clean_dataset():
@@ -22,6 +23,7 @@ def clean_dataset():
 
 def convert_to_tfrecord():
     command = [
+        "python",
         "../ThirdParty/ddsp/ddsp/training/data_preparation/ddsp_prepare_tfrecord.py",
         f"--input_audio_filepatterns={config.dataset_audio_filepattern}",
         f"--output_tfrecord_path={config.dataset_tfrecord}",

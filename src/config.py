@@ -1,6 +1,15 @@
 import os
+import sys
 
-dataset_audio_dir = os.path.join(os.pardir, 'dataset', 'audio_test')
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+if 'absl.logging' in sys.modules:
+    import absl.logging
+    absl.logging.set_verbosity('info')
+    absl.logging.set_stderrthreshold('info')
+
+
+dataset_audio_dir = os.path.join(os.pardir, 'dataset', 'audio')
 dataset_audio_filepattern = dataset_audio_dir + '/*'
 dataset_tfrecord_dir = os.path.join(os.pardir, 'dataset', 'tfrecords')
 dataset_tfrecord = os.path.join(dataset_tfrecord_dir, 'train.tfrecord')
@@ -11,7 +20,7 @@ sample_rate = 16000
 frame_rate = 16000
 time_steps = 1000
 
-num_steps = 30000
+n_steps = 30000
 batch_size = 1
 steps_per_summary = 1
 steps_per_save = 1

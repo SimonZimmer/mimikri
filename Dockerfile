@@ -36,9 +36,11 @@ RUN $APT_INSTALL libsndfile1 -y \
   ffmpeg
 
 # Config & cleanup
+RUN chmod +x -R /workspace
+
 RUN ldconfig \
   && apt-get clean \
   && apt-get autoremove \
   && rm -rf /var/lib/apt/lists/* /tmp/* ~/*
 
-EXPOSE 6006
+EXPOSE 600

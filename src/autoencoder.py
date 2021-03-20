@@ -1,14 +1,16 @@
 import os
+import time
+import pickle
+
 import soundfile
 import numpy as np
-import time
-import config
 import ddsp
 import gin
-import pickle
 import absl.logging as logging
 import tensorflow as tf
 from ddsp.training import (data, decoders, models, preprocessing, train_util)
+
+import config
 
 
 def write_audio_file(filepath, audio):
@@ -87,7 +89,7 @@ def train(data_provider, trainer):
     train_util.gin_register_keras_layers()
 
     train_util.train(data_provider, trainer,
-                     config.batch_size, config.num_steps,
+                     config.batch_size, config.n_steps,
                      config.steps_per_summary,
                      config.steps_per_save,
                      config.saved_models_dir,
@@ -111,7 +113,7 @@ def load_dataset_statistics():
 
 
 def load(audio):
-    gin_file = os.path.join(config.save_dir, 'operative_config-0.gin')
+    gin_file = os.path.join(config.save_dir, 'checkpoints', 'operative_config-0.gin')
 
     with gin.unlock_config():
         gin.parse_config_file(gin_file, skip_unknown=True)
